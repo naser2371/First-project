@@ -186,6 +186,90 @@
 <div id="app"></div>
 
 <script>
+// ─── Sound Engine ─────────────────────────────────────────────────────────────
+
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  return audioCtx;
+}
+
+function playMove() {
+  const ctx = getAudio();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(520, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(420, ctx.currentTime + 0.08);
+  gain.gain.setValueAtTime(0.18, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.12);
+}
+
+function playCapture() {
+  const ctx = getAudio();
+  // Low thud + high crack
+  [{ f: 180, t: 'sawtooth', g: 0.25, dur: 0.18 },
+   { f: 900, t: 'square',   g: 0.10, dur: 0.06 }].forEach(({ f, t, g, dur }) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = t;
+    osc.frequency.setValueAtTime(f, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.4, ctx.currentTime + dur);
+    gain.gain.setValueAtTime(g, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + dur);
+  });
+}
+
+function playCheck() {
+  const ctx = getAudio();
+  [0, 0.12, 0.24].forEach((delay, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime([660, 780, 880][i], ctx.currentTime + delay);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.1);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + 0.1);
+  });
+}
+
+function playCheckmate() {
+  const ctx = getAudio();
+  // Descending fanfare
+  const notes = [523, 494, 440, 392];
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    const t = ctx.currentTime + i * 0.18;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc.start(t);
+    osc.stop(t + 0.3);
+  });
+}
+
+function playSound(type) {
+  try {
+    if (type === 'move')      playMove();
+    else if (type === 'capture') playCapture();
+    else if (type === 'check')   playCheck();
+    else if (type === 'checkmate') playCheckmate();
+  } catch(e) { /* silence audio errors */ }
+}
+
 // ─── Chess Engine ─────────────────────────────────────────────────────────────
 
 const SYMBOLS = {
@@ -489,10 +573,18 @@ function handleClick(r, c) {
 
 function doMove(from, to, isPlayerMove) {
   const { board, history } = S;
-  const note = moveNotation(board, from, to);
-  const nb   = applyMove(board, from, to);
-  const nextW = !isPlayerMove;
-  const st   = getStatus(nb, nextW);
+  const note      = moveNotation(board, from, to);
+  const isCapture = !!board[to[0]][to[1]];
+  const nb        = applyMove(board, from, to);
+  const nextW     = !isPlayerMove;
+  const st        = getStatus(nb, nextW);
+
+  // Play the right sound
+  if      (st === 'checkmate') playSound('checkmate');
+  else if (st === 'check')     playSound('check');
+  else if (isCapture)          playSound('capture');
+  else                         playSound('move');
+
   S = { ...S, board: nb, sel: null, valids: [], whiteTurn: nextW,
         history: [...history, { n: note }], status: st, lastMove: { from, to },
         aiThinking: false };
