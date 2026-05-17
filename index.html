@@ -155,10 +155,7 @@
       border-bottom: 1px solid #3D1F10;
     }
 
-    .history-body {
-      overflow-y: auto;
-      max-height: 430px;
-    }
+    .history-body { overflow-y: auto; max-height: 430px; }
 
     .history-empty {
       color: #6B3410;
@@ -174,100 +171,125 @@
     .move-w    { color: #F0D9B5; font-family: monospace; }
     .move-b    { color: #B58863; font-family: monospace; }
 
+    /* ── Promotion Modal ── */
+    .promo-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.72);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .promo-box {
+      background: #2c1810;
+      border: 2px solid #8B4513;
+      border-radius: 10px;
+      padding: 24px 28px;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.9);
+    }
+    .promo-title {
+      color: #F0D9B5;
+      font-size: 15px;
+      letter-spacing: 1px;
+      margin-bottom: 18px;
+    }
+    .promo-options {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .promo-btn {
+      width: 64px; height: 64px;
+      font-size: 42px;
+      background: #F0D9B5;
+      border: 2px solid #8B4513;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s, transform 0.1s;
+      color: #1C0800;
+      text-shadow: none;
+    }
+    .promo-btn:hover { background: #FFD700; transform: scale(1.08); }
+
     @media (max-width: 560px) {
       .square { width: 42px; height: 42px; }
       .piece  { font-size: 30px; }
       .file-label { width: 42px; }
       .history-panel { display: none; }
+      .promo-btn { width: 52px; height: 52px; font-size: 34px; }
     }
   </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="promo-overlay" class="promo-overlay" style="display:none"></div>
 
 <script>
 // ─── Sound Engine ─────────────────────────────────────────────────────────────
 
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
-
-function getAudio() {
-  if (!audioCtx) audioCtx = new AudioCtx();
-  return audioCtx;
-}
+function getAudio() { if (!audioCtx) audioCtx = new AudioCtx(); return audioCtx; }
 
 function playMove() {
-  const ctx = getAudio();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain); gain.connect(ctx.destination);
+  const ctx = getAudio(), osc = ctx.createOscillator(), g = ctx.createGain();
+  osc.connect(g); g.connect(ctx.destination);
   osc.type = 'sine';
   osc.frequency.setValueAtTime(520, ctx.currentTime);
   osc.frequency.exponentialRampToValueAtTime(420, ctx.currentTime + 0.08);
-  gain.gain.setValueAtTime(0.18, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.12);
+  g.gain.setValueAtTime(0.18, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+  osc.start(); osc.stop(ctx.currentTime + 0.12);
 }
 
 function playCapture() {
   const ctx = getAudio();
-  // Low thud + high crack
-  [{ f: 180, t: 'sawtooth', g: 0.25, dur: 0.18 },
-   { f: 900, t: 'square',   g: 0.10, dur: 0.06 }].forEach(({ f, t, g, dur }) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+  [{f:180,t:'sawtooth',g:0.25,d:0.18},{f:900,t:'square',g:0.10,d:0.06}].forEach(({f,t,g,d}) => {
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
     osc.type = t;
     osc.frequency.setValueAtTime(f, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(f * 0.4, ctx.currentTime + dur);
+    osc.frequency.exponentialRampToValueAtTime(f*0.4, ctx.currentTime+d);
     gain.gain.setValueAtTime(g, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + dur);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+d);
+    osc.start(); osc.stop(ctx.currentTime+d);
   });
 }
 
 function playCheck() {
   const ctx = getAudio();
-  [0, 0.12, 0.24].forEach((delay, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
+  [0,0.12,0.24].forEach((delay,i) => {
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
     osc.type = 'sine';
-    osc.frequency.setValueAtTime([660, 780, 880][i], ctx.currentTime + delay);
-    gain.gain.setValueAtTime(0.15, ctx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.1);
-    osc.start(ctx.currentTime + delay);
-    osc.stop(ctx.currentTime + delay + 0.1);
+    osc.frequency.setValueAtTime([660,780,880][i], ctx.currentTime+delay);
+    g.gain.setValueAtTime(0.15, ctx.currentTime+delay);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+delay+0.1);
+    osc.start(ctx.currentTime+delay); osc.stop(ctx.currentTime+delay+0.1);
   });
 }
 
 function playCheckmate() {
   const ctx = getAudio();
-  // Descending fanfare
-  const notes = [523, 494, 440, 392];
-  notes.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
+  [523,494,440,392].forEach((freq,i) => {
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
     osc.type = 'triangle';
-    const t = ctx.currentTime + i * 0.18;
+    const t = ctx.currentTime + i*0.18;
     osc.frequency.setValueAtTime(freq, t);
-    gain.gain.setValueAtTime(0.2, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-    osc.start(t);
-    osc.stop(t + 0.3);
+    g.gain.setValueAtTime(0.2, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.3);
+    osc.start(t); osc.stop(t+0.3);
   });
 }
 
 function playSound(type) {
   try {
-    if (type === 'move')      playMove();
-    else if (type === 'capture') playCapture();
-    else if (type === 'check')   playCheck();
-    else if (type === 'checkmate') playCheckmate();
-  } catch(e) { /* silence audio errors */ }
+    if      (type==='move')      playMove();
+    else if (type==='capture')   playCapture();
+    else if (type==='check')     playCheck();
+    else if (type==='checkmate') playCheckmate();
+  } catch(e) {}
 }
 
 // ─── Chess Engine ─────────────────────────────────────────────────────────────
@@ -289,6 +311,9 @@ const INIT = [
   ['R','N','B','Q','K','B','N','R']
 ];
 
+// Castling rights: { wK, wQ, bK, bQ } — all start true
+const INIT_CASTLE = { wK: true, wQ: true, bK: true, bQ: true };
+
 const isW  = p => !!(p && 'KQRBNP'.includes(p));
 const isB  = p => !!(p && 'kqrbnp'.includes(p));
 const inBd = (r,c) => r>=0 && r<8 && c>=0 && c<8;
@@ -302,35 +327,35 @@ function pseudoMoves(board, r, c) {
   const mv = [];
 
   const slide = (dr, dc) => {
-    let nr = r+dr, nc = c+dc;
-    while (inBd(nr, nc)) {
+    let nr=r+dr, nc=c+dc;
+    while (inBd(nr,nc)) {
       if (fr(board[nr][nc])) break;
-      mv.push([nr, nc]);
+      mv.push([nr,nc]);
       if (en(board[nr][nc])) break;
-      nr += dr; nc += dc;
+      nr+=dr; nc+=dc;
     }
   };
 
-  if (t === 'p') {
-    const d = w ? -1 : 1, sr = w ? 6 : 1;
-    if (inBd(r+d, c) && !board[r+d][c]) {
-      mv.push([r+d, c]);
-      if (r === sr && !board[r+2*d][c]) mv.push([r+2*d, c]);
+  if (t==='p') {
+    const d=w?-1:1, sr=w?6:1;
+    if (inBd(r+d,c) && !board[r+d][c]) {
+      mv.push([r+d,c]);
+      if (r===sr && !board[r+2*d][c]) mv.push([r+2*d,c]);
     }
-    for (const dc of [-1, 1])
-      if (inBd(r+d, c+dc) && en(board[r+d][c+dc])) mv.push([r+d, c+dc]);
-  } else if (t === 'n') {
+    for (const dc of [-1,1])
+      if (inBd(r+d,c+dc) && en(board[r+d][c+dc])) mv.push([r+d,c+dc]);
+  } else if (t==='n') {
     for (const [dr,dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]])
-      if (inBd(r+dr, c+dc) && !fr(board[r+dr][c+dc])) mv.push([r+dr, c+dc]);
-  } else if (t === 'b') {
-    [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc]) => slide(dr, dc));
-  } else if (t === 'r') {
-    [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc]) => slide(dr, dc));
-  } else if (t === 'q') {
-    [[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc]) => slide(dr, dc));
-  } else if (t === 'k') {
+      if (inBd(r+dr,c+dc) && !fr(board[r+dr][c+dc])) mv.push([r+dr,c+dc]);
+  } else if (t==='b') {
+    [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>slide(dr,dc));
+  } else if (t==='r') {
+    [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>slide(dr,dc));
+  } else if (t==='q') {
+    [[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>slide(dr,dc));
+  } else if (t==='k') {
     for (const [dr,dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]])
-      if (inBd(r+dr, c+dc) && !fr(board[r+dr][c+dc])) mv.push([r+dr, c+dc]);
+      if (inBd(r+dr,c+dc) && !fr(board[r+dr][c+dc])) mv.push([r+dr,c+dc]);
   }
   return mv;
 }
@@ -339,60 +364,125 @@ function pawnAttacks(board, r, c) {
   const p = board[r][c]; if (!p) return [];
   if (p.toLowerCase() !== 'p') return pseudoMoves(board, r, c);
   const d = isW(p) ? -1 : 1;
-  return [c-1, c+1].filter(nc => inBd(r+d, nc)).map(nc => [r+d, nc]);
+  return [c-1,c+1].filter(nc => inBd(r+d,nc)).map(nc => [r+d,nc]);
 }
 
 function isAttacked(board, r, c, byW) {
-  for (let pr = 0; pr < 8; pr++)
-    for (let pc = 0; pc < 8; pc++) {
+  for (let pr=0; pr<8; pr++)
+    for (let pc=0; pc<8; pc++) {
       const p = board[pr][pc];
-      if (!p || (byW ? !isW(p) : !isB(p))) continue;
-      if (pawnAttacks(board, pr, pc).some(([ar,ac]) => ar === r && ac === c)) return true;
+      if (!p || (byW?!isW(p):!isB(p))) continue;
+      if (pawnAttacks(board,pr,pc).some(([ar,ac])=>ar===r&&ac===c)) return true;
     }
   return false;
 }
 
 function findKing(board, white) {
   const k = white ? 'K' : 'k';
-  for (let r = 0; r < 8; r++)
-    for (let c = 0; c < 8; c++)
-      if (board[r][c] === k) return [r, c];
-  return [0, 0];
+  for (let r=0; r<8; r++)
+    for (let c=0; c<8; c++)
+      if (board[r][c]===k) return [r,c];
+  return [0,0];
 }
 
 function inCheck(board, white) {
-  const [kr, kc] = findKing(board, white);
+  const [kr,kc] = findKing(board, white);
   return isAttacked(board, kr, kc, !white);
 }
 
-function applyMove(board, [fr,fc], [tr,tc]) {
+// Apply a move and handle castling rook, en passant placeholder
+function applyMove(board, [fr,fc], [tr,tc], promoPiece) {
   const b = clone(board);
   const p = b[fr][fc];
   b[tr][tc] = p;
   b[fr][fc] = null;
-  if (p === 'P' && tr === 0) b[tr][tc] = 'Q';
-  if (p === 'p' && tr === 7) b[tr][tc] = 'q';
+
+  // Castling: move the rook too
+  if (p==='K' && fr===7 && fc===4) {
+    if (tc===6) { b[7][5]=b[7][7]; b[7][7]=null; } // kingside
+    if (tc===2) { b[7][3]=b[7][0]; b[7][0]=null; } // queenside
+  }
+  if (p==='k' && fr===0 && fc===4) {
+    if (tc===6) { b[0][5]=b[0][7]; b[0][7]=null; }
+    if (tc===2) { b[0][3]=b[0][0]; b[0][0]=null; }
+  }
+
+  // Promotion
+  if (p==='P' && tr===0) b[tr][tc] = promoPiece || 'Q';
+  if (p==='p' && tr===7) b[tr][tc] = (promoPiece ? promoPiece.toLowerCase() : 'q');
+
   return b;
 }
 
-function legalMoves(board, r, c, white) {
-  const p = board[r][c];
-  if (!p || (white && !isW(p)) || (!white && !isB(p))) return [];
-  return pseudoMoves(board, r, c).filter(([tr,tc]) =>
-    !inCheck(applyMove(board, [r,c], [tr,tc]), white)
-  );
+// Update castling rights after a move
+function updateCastle(castle, board, [fr,fc]) {
+  const c = { ...castle };
+  const p = board[fr][fc];
+  if (p==='K') { c.wK=false; c.wQ=false; }
+  if (p==='k') { c.bK=false; c.bQ=false; }
+  if (p==='R' && fr===7 && fc===7) c.wK=false;
+  if (p==='R' && fr===7 && fc===0) c.wQ=false;
+  if (p==='r' && fr===0 && fc===7) c.bK=false;
+  if (p==='r' && fr===0 && fc===0) c.bQ=false;
+  return c;
 }
 
-function allMoves(board, white) {
+// Get castling moves for a king
+function castlingMoves(board, castle, white) {
   const moves = [];
-  for (let r = 0; r < 8; r++)
-    for (let c = 0; c < 8; c++) {
+  if (white) {
+    if (board[7][4]!=='K') return moves;
+    if (inCheck(board, true)) return moves; // can't castle while in check
+    // Kingside
+    if (castle.wK && !board[7][5] && !board[7][6] && board[7][7]==='R') {
+      if (!isAttacked(board,7,5,false) && !isAttacked(board,7,6,false))
+        moves.push({ from:[7,4], to:[7,6], castle:'wK' });
+    }
+    // Queenside
+    if (castle.wQ && !board[7][3] && !board[7][2] && !board[7][1] && board[7][0]==='R') {
+      if (!isAttacked(board,7,3,false) && !isAttacked(board,7,2,false))
+        moves.push({ from:[7,4], to:[7,2], castle:'wQ' });
+    }
+  } else {
+    if (board[0][4]!=='k') return moves;
+    if (inCheck(board, false)) return moves;
+    if (castle.bK && !board[0][5] && !board[0][6] && board[0][7]==='r') {
+      if (!isAttacked(board,0,5,true) && !isAttacked(board,0,6,true))
+        moves.push({ from:[0,4], to:[0,6], castle:'bK' });
+    }
+    if (castle.bQ && !board[0][3] && !board[0][2] && !board[0][1] && board[0][0]==='r') {
+      if (!isAttacked(board,0,3,true) && !isAttacked(board,0,2,true))
+        moves.push({ from:[0,4], to:[0,2], castle:'bQ' });
+    }
+  }
+  return moves;
+}
+
+function legalMoves(board, r, c, white, castle) {
+  const p = board[r][c];
+  if (!p || (white&&!isW(p)) || (!white&&!isB(p))) return [];
+  const base = pseudoMoves(board,r,c).filter(([tr,tc]) =>
+    !inCheck(applyMove(board,[r,c],[tr,tc]), white)
+  );
+  // Add castling squares for king
+  if ((p==='K'||p==='k') && castle) {
+    castlingMoves(board,castle,white).forEach(m => base.push(m.to));
+  }
+  return base;
+}
+
+function allMoves(board, white, castle) {
+  const moves = [];
+  for (let r=0; r<8; r++)
+    for (let c=0; c<8; c++) {
       const p = board[r][c];
-      if (!p || (white && !isW(p)) || (!white && !isB(p))) continue;
-      legalMoves(board, r, c, white).forEach(to => moves.push({ from:[r,c], to }));
+      if (!p || (white&&!isW(p)) || (!white&&!isB(p))) continue;
+      legalMoves(board,r,c,white,castle).forEach(to => moves.push({ from:[r,c], to }));
     }
   return moves;
 }
+
+// ─── Evaluation & AI ─────────────────────────────────────────────────────────
 
 const PV = { p:100, n:320, b:330, r:500, q:900, k:20000 };
 const PP = [
@@ -410,65 +500,108 @@ const NP = [
 
 function evalBoard(board) {
   let s = 0;
-  for (let r = 0; r < 8; r++)
-    for (let c = 0; c < 8; c++) {
+  for (let r=0; r<8; r++)
+    for (let c=0; c<8; c++) {
       const p = board[r][c]; if (!p) continue;
       const t = p.toLowerCase(), w = isW(p);
       let v = PV[t] || 0;
-      if (t === 'p') v += w ? PP[r][c] : PP[7-r][c];
-      if (t === 'n') v += w ? NP[r][c] : NP[7-r][c];
+      if (t==='p') v += w ? PP[r][c] : PP[7-r][c];
+      if (t==='n') v += w ? NP[r][c] : NP[7-r][c];
       s += w ? v : -v;
     }
   return s;
 }
 
-function minimax(board, depth, alpha, beta, white) {
-  if (depth === 0) return { score: evalBoard(board) };
-  const moves = allMoves(board, white);
+function minimax(board, depth, alpha, beta, white, castle) {
+  if (depth===0) return { score: evalBoard(board) };
+  const moves = allMoves(board, white, castle);
   if (!moves.length)
-    return { score: inCheck(board, white) ? (white ? -50000 : 50000) : 0 };
+    return { score: inCheck(board,white) ? (white?-50000:50000) : 0 };
   let best = white ? -Infinity : Infinity, bestMove = null;
   for (const m of moves) {
     const nb = applyMove(board, m.from, m.to);
-    const { score } = minimax(nb, depth-1, alpha, beta, !white);
-    if (white ? score > best : score < best) { best = score; bestMove = m; }
+    const nc = updateCastle(castle, board, m.from);
+    const { score } = minimax(nb, depth-1, alpha, beta, !white, nc);
+    if (white ? score>best : score<best) { best=score; bestMove=m; }
     if (white) alpha = Math.max(alpha, best);
     else       beta  = Math.min(beta,  best);
-    if (beta <= alpha) break;
+    if (beta<=alpha) break;
   }
   return { score: best, move: bestMove };
 }
 
-function moveNotation(board, [fr,fc], [tr,tc]) {
+function moveNotation(board, [fr,fc], [tr,tc], promoPiece) {
   const p = board[fr][fc], t = p.toLowerCase(), cap = board[tr][tc];
-  const sq = FILES[tc] + (8 - tr);
-  if (t === 'p') {
-    if (cap) return FILES[fc] + 'x' + sq;
-    if (tr === 0 || tr === 7) return sq + '=Q';
-    return sq;
+  const sq = FILES[tc] + (8-tr);
+  // Castling notation
+  if (t==='k' && fc===4) {
+    if (tc===6) return 'O-O';
+    if (tc===2) return 'O-O-O';
   }
-  return p.toUpperCase() + (cap ? 'x' : '') + sq;
+  if (t==='p') {
+    let n = cap ? FILES[fc]+'x'+sq : sq;
+    if (tr===0||tr===7) n += '='+(promoPiece||'Q');
+    return n;
+  }
+  return p.toUpperCase() + (cap?'x':'') + sq;
 }
 
-function getStatus(board, white) {
-  const moves = allMoves(board, white);
+function getStatus(board, white, castle) {
+  const moves = allMoves(board, white, castle);
   const chk = inCheck(board, white);
   if (!moves.length) return chk ? 'checkmate' : 'stalemate';
   return chk ? 'check' : 'playing';
 }
 
+// Is this pawn move a promotion?
+function isPromotion(board, [fr,fc], [tr]) {
+  const p = board[fr][fc];
+  return (p==='P' && tr===0) || (p==='p' && tr===7);
+}
+
 // ─── UI State ─────────────────────────────────────────────────────────────────
 
-let S = {
-  board: INIT.map(r => [...r]),
-  sel: null, valids: [],
-  whiteTurn: true,
-  history: [],
-  status: 'playing',
-  lastMove: null,
-  aiThinking: false
-};
+function initState() {
+  return {
+    board: INIT.map(r => [...r]),
+    castle: { ...INIT_CASTLE },
+    sel: null, valids: [],
+    whiteTurn: true,
+    history: [],
+    status: 'playing',
+    lastMove: null,
+    aiThinking: false,
+    pendingPromo: null   // { from, to } waiting for player to pick piece
+  };
+}
+
+let S = initState();
 let aiTimer = null;
+
+// ─── Promotion Modal ──────────────────────────────────────────────────────────
+
+function showPromoModal(from, to) {
+  const overlay = document.getElementById('promo-overlay');
+  const pieces = ['Q','R','B','N'];
+  const symbols = { Q:'♕', R:'♖', B:'♗', N:'♘' };
+  overlay.innerHTML = `
+    <div class="promo-box">
+      <div class="promo-title">Choose a promotion piece</div>
+      <div class="promo-options">
+        ${pieces.map(p => `
+          <button class="promo-btn" data-piece="${p}" title="${p}">${symbols[p]}</button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  overlay.style.display = 'flex';
+  overlay.querySelectorAll('.promo-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      overlay.style.display = 'none';
+      finishPlayerMove(from, to, btn.dataset.piece);
+    });
+  });
+}
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 
@@ -476,11 +609,11 @@ function render() {
   const { board, sel, valids, whiteTurn, history, status, lastMove, aiThinking } = S;
 
   const pairs = [];
-  for (let i = 0; i < history.length; i += 2)
+  for (let i=0; i<history.length; i+=2)
     pairs.push({ num: Math.floor(i/2)+1, w: history[i]?.n, b: history[i+1]?.n });
 
-  const statusColor = status === 'checkmate' ? '#FFD700'
-                    : status === 'check'     ? '#e24b4a'
+  const statusColor = status==='checkmate' ? '#FFD700'
+                    : status==='check'     ? '#e24b4a'
                     : '#D4A373';
   const statusText = {
     playing:   whiteTurn ? 'Your turn — White' : (aiThinking ? 'AI is thinking…' : ''),
@@ -489,24 +622,23 @@ function render() {
     stalemate: 'Stalemate — Draw!'
   }[status] || '';
 
-  // Board HTML
   let bHTML = `<div class="player-label">Black — AI</div><div class="board-wrap">`;
-  for (let r = 0; r < 8; r++) {
+  for (let r=0; r<8; r++) {
     bHTML += `<div class="board-row"><div class="rank-label">${8-r}</div>`;
-    for (let c = 0; c < 8; c++) {
+    for (let c=0; c<8; c++) {
       const piece = board[r][c];
-      const light = (r + c) % 2 === 0;
-      const isSel = sel && sel[0] === r && sel[1] === c;
-      const isVal = valids.some(([vr,vc]) => vr === r && vc === c);
-      const isLF  = lastMove && lastMove.from[0] === r && lastMove.from[1] === c;
-      const isLT  = lastMove && lastMove.to[0]   === r && lastMove.to[1]   === c;
+      const light = (r+c)%2===0;
+      const isSel = sel && sel[0]===r && sel[1]===c;
+      const isVal = valids.some(([vr,vc])=>vr===r&&vc===c);
+      const isLF  = lastMove && lastMove.from[0]===r && lastMove.from[1]===c;
+      const isLT  = lastMove && lastMove.to[0]===r   && lastMove.to[1]===c;
 
       let bg = light ? '#F0D9B5' : '#B58863';
-      if (isSel)        bg = light ? '#F6F669' : '#BACA2B';
+      if (isSel)           bg = light ? '#F6F669' : '#BACA2B';
       else if (isLF||isLT) bg = light ? '#CDD26A' : '#AABA3E';
 
-      const active = whiteTurn && !aiThinking && status !== 'checkmate' && status !== 'stalemate';
-      const clickable = active && ((piece && isW(piece)) || (sel && isVal));
+      const active = whiteTurn && !aiThinking && status!=='checkmate' && status!=='stalemate' && !S.pendingPromo;
+      const clickable = active && ((piece&&isW(piece)) || (sel&&isVal));
 
       bHTML += `<div class="square${clickable?' clickable':''}" style="background:${bg}" data-r="${r}" data-c="${c}">`;
       if (isVal) bHTML += piece ? `<div class="ring-hint"></div>` : `<div class="dot-hint"></div>`;
@@ -522,13 +654,12 @@ function render() {
   bHTML += `<div class="status-bar" style="color:${statusColor}">${statusText}</div>`;
   bHTML += `<button class="new-game-btn" id="newgame">↺ New Game</button>`;
 
-  // History HTML
   let hHTML = `<div class="history-title">Move History</div><div class="history-body" id="hbody">`;
   if (!pairs.length) {
     hHTML += `<div class="history-empty">No moves yet</div>`;
   } else {
     hHTML += `<table class="move-table"><tbody>`;
-    pairs.forEach((p, i) => {
+    pairs.forEach((p,i) => {
       hHTML += `<tr style="background:${i%2?'rgba(255,255,255,0.03)':'transparent'}">
         <td class="move-num">${p.num}.</td>
         <td class="move-w">${p.w||''}</td>
@@ -555,65 +686,83 @@ function render() {
 // ─── Game Logic ───────────────────────────────────────────────────────────────
 
 function handleClick(r, c) {
-  const { board, sel, valids, whiteTurn, status, aiThinking } = S;
-  if (!whiteTurn || status === 'checkmate' || status === 'stalemate' || aiThinking) return;
+  const { board, sel, valids, whiteTurn, status, aiThinking, castle, pendingPromo } = S;
+  if (!whiteTurn || status==='checkmate' || status==='stalemate' || aiThinking || pendingPromo) return;
 
-  if (sel && valids.some(([vr,vc]) => vr === r && vc === c)) {
-    doMove(sel, [r, c], true);
+  if (sel && valids.some(([vr,vc])=>vr===r&&vc===c)) {
+    const from = sel, to = [r,c];
+    if (isPromotion(board, from, to)) {
+      S = { ...S, sel:null, valids:[], pendingPromo: { from, to } };
+      render();
+      showPromoModal(from, to);
+    } else {
+      finishPlayerMove(from, to, null);
+    }
     return;
   }
+
   const p = board[r][c];
   if (p && isW(p)) {
-    S = { ...S, sel: [r,c], valids: legalMoves(board, r, c, true) };
+    S = { ...S, sel:[r,c], valids: legalMoves(board,r,c,true,castle) };
   } else {
-    S = { ...S, sel: null, valids: [] };
+    S = { ...S, sel:null, valids:[] };
   }
   render();
 }
 
-function doMove(from, to, isPlayerMove) {
-  const { board, history } = S;
-  const note      = moveNotation(board, from, to);
+function finishPlayerMove(from, to, promoPiece) {
+  const { board, castle, history } = S;
+  const note      = moveNotation(board, from, to, promoPiece);
   const isCapture = !!board[to[0]][to[1]];
-  const nb        = applyMove(board, from, to);
-  const nextW     = !isPlayerMove;
-  const st        = getStatus(nb, nextW);
+  const nb        = applyMove(board, from, to, promoPiece);
+  const nc        = updateCastle(castle, board, from);
+  const st        = getStatus(nb, false, nc);
 
-  // Play the right sound
-  if      (st === 'checkmate') playSound('checkmate');
-  else if (st === 'check')     playSound('check');
-  else if (isCapture)          playSound('capture');
-  else                         playSound('move');
+  if      (st==='checkmate') playSound('checkmate');
+  else if (st==='check')     playSound('check');
+  else if (isCapture)        playSound('capture');
+  else                       playSound('move');
 
-  S = { ...S, board: nb, sel: null, valids: [], whiteTurn: nextW,
-        history: [...history, { n: note }], status: st, lastMove: { from, to },
-        aiThinking: false };
+  S = { ...S, board:nb, castle:nc, sel:null, valids:[], whiteTurn:false,
+        history:[...history,{n:note}], status:st, lastMove:{from,to},
+        aiThinking:false, pendingPromo:null };
   render();
-  if (isPlayerMove && st !== 'checkmate' && st !== 'stalemate') scheduleAI();
+  if (st!=='checkmate' && st!=='stalemate') scheduleAI();
 }
 
 function scheduleAI() {
   if (aiTimer) clearTimeout(aiTimer);
-  S = { ...S, aiThinking: true };
+  S = { ...S, aiThinking:true };
   render();
   aiTimer = setTimeout(() => {
-    const result = minimax(S.board, 2, -Infinity, Infinity, false);
-    if (result.move) doMove(result.move.from, result.move.to, false);
-    else { S = { ...S, aiThinking: false }; render(); }
+    const { board, castle } = S;
+    const result = minimax(board, 2, -Infinity, Infinity, false, castle);
+    if (result.move) {
+      const { from, to } = result.move;
+      const note      = moveNotation(board, from, to, 'Q');
+      const isCapture = !!board[to[0]][to[1]];
+      const nb        = applyMove(board, from, to, 'Q');
+      const nc        = updateCastle(castle, board, from);
+      const st        = getStatus(nb, true, nc);
+
+      if      (st==='checkmate') playSound('checkmate');
+      else if (st==='check')     playSound('check');
+      else if (isCapture)        playSound('capture');
+      else                       playSound('move');
+
+      S = { ...S, board:nb, castle:nc, whiteTurn:true, aiThinking:false,
+            history:[...S.history,{n:note}], status:st, lastMove:{from,to} };
+    } else {
+      S = { ...S, aiThinking:false };
+    }
+    render();
   }, 350);
 }
 
 function resetGame() {
   if (aiTimer) clearTimeout(aiTimer);
-  S = {
-    board: INIT.map(r => [...r]),
-    sel: null, valids: [],
-    whiteTurn: true,
-    history: [],
-    status: 'playing',
-    lastMove: null,
-    aiThinking: false
-  };
+  document.getElementById('promo-overlay').style.display = 'none';
+  S = initState();
   render();
 }
 
